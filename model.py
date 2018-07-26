@@ -24,12 +24,15 @@ class NN4SNLI(nn.Module):
         self.char_emb = nn.Embedding(args.char_vocab_size, args.char_dim, padding_idx=0)
         self.charCNN = CharCNN(args)
 
+        # BiLSTM encoder with shortcut connections
         self.SeqEnc = SeqEncoder(args)
 
+        # vector-based multi-head attention
         for i in range(args.num_heads):
             s2t = s2tSA(args)
             setattr(self, f's2tSA_{i}', s2t)
 
+        # fully-connected layers for classification
         self.fc = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim, args.num_heads * args.hidden_dim)
         self.fc_out = nn.Linear(args.num_heads * args.hidden_dim, args.class_size)
         self.relu = nn.ReLU()
@@ -44,10 +47,12 @@ class NN4SNLI(nn.Module):
         p, p_lengths = batch.premise
         h, h_lengths = batch.hypothesis
 
+        # word embedding
         # (batch, seq_len, word_dim)
         p = self.word_emb(p)
         h = self.word_emb(h)
 
+        # character embedding
         if not self.args.no_char_emb:
             # (batch, seq_len, max_word_len)
             char_p = batch.char_p
@@ -70,9 +75,11 @@ class NN4SNLI(nn.Module):
         p = torch.cat([p, char_p], dim=-1)
         h = torch.cat([h, char_h], dim=-1)
 
+        # BiLSTM sequence encoder
         p = self.SeqEnc(p, p_lengths)
         h = self.SeqEnc(h, h_lengths)
 
+        # vector-based multi-head attention
         v_ps = []
         v_hs = []
         for i in range(self.args.num_heads):
@@ -87,6 +94,7 @@ class NN4SNLI(nn.Module):
 
         v = torch.cat([v_p, v_h, (v_p - v_h).abs(), v_p * v_h], dim=-1)
 
+        # fully-connected layers
         out = self.fc(v)
         out = self.relu(out)
         out = self.fc_out(out)
@@ -171,8 +179,10 @@ class s2tSA(nn.Module):
         # (batch, seq_len, word_dim)
         f = self.relu(self.fc1(x))
         f = F.softmax(self.fc2(f), dim=-2)
+
         # (batch, word_dim)
         s = torch.sum(f * x, dim=-2)
+
         return s
 
 
