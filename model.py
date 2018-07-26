@@ -24,7 +24,6 @@ class NN4SNLI(nn.Module):
         self.char_emb = nn.Embedding(args.char_vocab_size, args.char_dim, padding_idx=0)
         self.charCNN = CharCNN(args)
 
-        # self.SeqEnc = SeqEncoder(args)
         self.SeqEnc = SeqEncoder(args)
 
         for i in range(args.num_heads):
