@@ -35,7 +35,7 @@ class NN4SNLI(nn.Module):
         # fully-connected layers for classification
         self.fc1 = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim, args.hidden_dim)
         self.fc2 = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim + args.hidden_dim, args.hidden_dim)
-        self.fc_out = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim + args.hidden_dim, args.class_size)
+        self.fc_out = nn.Linear(args.hidden_dim, args.class_size)
         self.relu = nn.ReLU()
 
 
@@ -110,59 +110,43 @@ class SeqEncoder(nn.Module):
         super(SeqEncoder, self).__init__()
 
         self.args = args
-        self.emb_char_dim = len(args.FILTER_SIZES) * args.num_feature_maps
+        self.emb_dim = args.word_dim + len(args.FILTER_SIZES) * args.num_feature_maps
 
-        self.first_lstm_layer = nn.LSTM(
-            input_size=args.word_dim + self.emb_char_dim,
-            hidden_size=args.hidden_dim,
-            bidirectional=True,
-            batch_first=True
-        )
-        for i in range(args.num_layers - 1):
-            lstm_input_dim = args.word_dim + self.emb_char_dim + args.hidden_dim
-            fw_lstm_layer = nn.LSTM(
+        for i in range(args.num_layers):
+            if i == 0:
+                lstm_input_dim = self.emb_dim
+            else:
+                lstm_input_dim = self.emb_dim + 2 * args.hidden_dim
+            lstm_layer = nn.LSTM(
                 input_size=lstm_input_dim,
                 hidden_size=args.hidden_dim,
+                bidirectional=True,
                 batch_first=True
             )
-            bw_lstm_layer = nn.LSTM(
-                input_size=lstm_input_dim,
-                hidden_size=args.hidden_dim,
-                batch_first=True
-            )
-            setattr(self, f'fw_lstm_layer_{i}', fw_lstm_layer)
-            setattr(self, f'bw_lstm_layer_{i}', bw_lstm_layer)
+            setattr(self, f'lstm_layer_{i}', lstm_layer)
 
 
     def get_lstm_layer(self, i):
-        return getattr(self, f'fw_lstm_layer_{i}'), getattr(self, f'bw_lstm_layer_{i}')
+        return getattr(self, f'lstm_layer_{i}')
 
 
     def forward(self, x, lengths):
         lens, indices = torch.sort(lengths, 0, True)
 
         x_sorted = x[indices]
-        lstm_input = pack(x_sorted, lens.tolist(), batch_first=True)
-        out, hid = self.first_lstm_layer(lstm_input)
-        out = unpack(out, batch_first=True)[0]
 
-        fw_out = out[:, :, :self.args.hidden_dim]
-        bw_out = out[:, :, self.args.hidden_dim:]
-
-        for i in range(self.args.num_layers - 1):
-            fw_lstm_layer, bw_lstm_layer = self.get_lstm_layer(i)
-            fw_in = pack(torch.cat([x_sorted, fw_out], dim=-1), lens.tolist(), batch_first=True)
-            bw_in = pack(torch.cat([x_sorted, bw_out], dim=-1), lens.tolist(), batch_first=True)
-            fw_out, fw_hid = fw_lstm_layer(fw_in)
-            bw_out, bw_hid = bw_lstm_layer(bw_in)
-            fw_out = unpack(fw_out, batch_first=True)[0]
-            bw_out = unpack(bw_out, batch_first=True)[0]
+        for i in range(self.args.num_layers):
+            if i == 0:
+                lstm_in = pack(x_sorted, lens.tolist(), batch_first=True)
+            else:
+                lstm_in = pack(torch.cat([x_sorted, lstm_out], dim=-1), lens.tolist(), batch_first=True)
+            lstm_layer = self.get_lstm_layer(i)
+            lstm_out, hid = lstm_layer(lstm_in)
+            lstm_out = unpack(lstm_out, batch_first=True)[0]
 
         _, _indices = torch.sort(indices, 0)
-        fw_out = fw_out[_indices]
-        bw_out = bw_out[_indices]
+        out = lstm_out[_indices]
 
-        out = torch.cat([fw_out, bw_out], dim=-1)
         return out
 
 
