@@ -18,7 +18,7 @@ class NN4SNLI(nn.Module):
         # fine-tune the word embedding
         self.word_emb.weight.requires_grad = False
         # <unk> vectors is randomly initialized
-        nn.init.uniform_(self.word_emb.weight.data[0], -0.05, 0.05)
+        nn.init.normal_(self.word_emb.weight.data[0])
 
         # character embedding
         self.char_emb = nn.Embedding(args.char_vocab_size, args.char_dim, padding_idx=0)
@@ -33,8 +33,9 @@ class NN4SNLI(nn.Module):
             setattr(self, f's2tSA_{i}', s2t)
 
         # fully-connected layers for classification
-        self.fc = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim, args.num_heads * args.hidden_dim)
-        self.fc_out = nn.Linear(args.num_heads * args.hidden_dim, args.class_size)
+        self.fc1 = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim, args.hidden_dim)
+        self.fc2 = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim + args.hidden_dim, args.hidden_dim)
+        self.fc_out = nn.Linear(args.num_heads * 4 * 2 * args.hidden_dim + args.hidden_dim, args.class_size)
         self.relu = nn.ReLU()
 
 
@@ -43,7 +44,6 @@ class NN4SNLI(nn.Module):
 
 
     def forward(self, batch):
-
         p, p_lengths = batch.premise
         h, h_lengths = batch.hypothesis
 
@@ -95,7 +95,9 @@ class NN4SNLI(nn.Module):
         v = torch.cat([v_p, v_h, (v_p - v_h).abs(), v_p * v_h], dim=-1)
 
         # fully-connected layers
-        out = self.fc(v)
+        out = self.fc1(v)
+        out = self.relu(out)
+        out = self.fc2(torch.cat([v, out], dim=-1))
         out = self.relu(out)
         out = self.fc_out(out)
 
