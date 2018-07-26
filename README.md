@@ -1,4 +1,4 @@
-# BiLSTM Generalized Pooling
+# Enhancing Sentence Embedding with Generalized Pooling
 Pytorch re-implementation of [Enhancing Sentence Embedding with Generalized Pooling](https://arxiv.org/abs/1806.09828) without penalization.
 This is an unofficial implementation. There is [the implementation by the authors](https://github.com/lukecq1231/generalized-pooling), which is implemented on Theano.
 
