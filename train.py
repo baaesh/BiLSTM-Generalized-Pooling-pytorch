@@ -12,18 +12,6 @@ from data import SNLI
 from test import test
 
 
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-
-def print_parameters(model):
-    print("parameters of each layer")
-    for n, p in model.named_parameters():
-        if p.requires_grad:
-            print('    ' + str(n))
-            print('    ' + str(p.size()))
-
-
 def train(args, data):
     model = NN4SNLI(args, data)
     if args.gpu > -1:
@@ -32,8 +20,6 @@ def train(args, data):
     parameters = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = optim.Adam(parameters, lr=args.learning_rate)
     criterion = nn.CrossEntropyLoss()
-    print("number of all parameters: " + str(count_parameters(model)))
-    print(print_parameters(model))
 
     writer = SummaryWriter(log_dir='runs/' + args.model_time)
 
