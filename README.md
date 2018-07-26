@@ -8,7 +8,7 @@ Dataset: [SNLI](https://nlp.stanford.edu/projects/snli/)
 | Model | Valid Acc(%) | Test Acc(%)
 | ----- | ------------ | -----------
 | Baseline from the paper (without penalization) | - | 86.4 |
-| Re-implemenation | 86.1 | 85.2 |
+| Re-implemenation | - | - |
 
 ## Development Environment
 - OS: Ubuntu 16.04 LTS (64bit)
