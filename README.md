@@ -1,4 +1,4 @@
-# Self-Attention Network for Natural Language Inference
+# BiLSTM Generalized Pooling
 Pytorch re-implementation of [Enhancing Sentence Embedding with Generalized Pooling](https://arxiv.org/abs/1806.09828) without penalization.
 This is an unofficial implementation.
 
