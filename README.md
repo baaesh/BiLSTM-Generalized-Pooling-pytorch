@@ -54,5 +54,6 @@ Please install the following library requirements first.
       --no-char-emb
       --norm-limit NORM_LIMIT
 
-NOTE: Only codes to use SNLI as training data are implemented.
+**Note:** 
+- Only codes to use SNLI as training data are implemented.
 
